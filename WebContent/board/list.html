@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+<link rel="stylesheet"
+	href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+<script
+	src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script
+	src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<script
+	src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<link rel="stylesheet"
+	href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+<link rel="stylesheet"
+	href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.8.2/css/all.min.css" />
+<link rel="stylesheet" href="../css/main.css">
+<script type="text/javascript" src="../js/main.js?ver2"></script>
+<style type="text/css">
+.modal {
+   text-align: center;
+}
+
+.modal-dialog {
+   display: inline-block;
+   text-align: left;
+   vertical-align: middle;
+}
+
+* {
+   border: 0;
+   margin: 0;
+}
+
+td a {
+   width: 100%;
+}
+</style>
+<script type="text/javascript">
+	//현재 날짜 가져 오는 함수
+	function getToday(){ 
+		// 자바스크립트 객체 Date 가져옴
+		const today=new Date();
+		//오늘 날짜를 가져옴 
+		let dd=today.getDate();
+		//getMonth인경우 1월이 0부터 시작하므로 +1
+		let mm=today.getMonth()+1; //1월이 0임
+		//Fullyear시 xxxx 다 가져옴
+		let yyyy=today.getFullYear();
+		if(dd<10){
+			//getdate가 한자리 수라면 앞에 0을 붙여서 dd를 만듬
+			dd='0'+dd;
+		}
+		if(mm<10){
+			//getMonth가 한자리 수라면 앞에 0을 붙여서 mm를 만듬
+			mm='0'+mm;
+		}
+		return yyyy+'-'+mm+'-'+dd;
+	}
+
+
+	$(function() {
+		//서버가 보내줄 페이징 결과를 저장
+		//타입 let은 호이스팅이 안되므로 위에서부터
+		let page=undefined;
+		//1. 주소에서 pageno,pagesize,writer를 분리하고 쿼리스트링을 만들어 Ajax요청을 보냄
+		//첫페이지가 아니라면
+		let queryString='pageno=1';
+		//로케이션.serach 검색
+		if(location.search!=''){
+		//search는 쿼리스트링 ?이하 출력
+			console.log(location.search);
+			console.log(location.search.substring(1));
+			queryString=location.search.substring(1);
+		}
+		$.ajax({
+			url:'http://192.168.0.99:80/cha_board/api/boards',
+			method:'get',
+			data:queryString+'&apiKey='+apiKey
+		}).done((result,textStatus,request)=>{
+			console.log('result',result);
+			console.log('textStatus',textStatus);
+			console.log('request',request);
+			page=result;
+			printData(); //서버에서 받아온 데이터를 태그 table에 넣을 함수 
+		}).fail((error)=>{
+			printError(error,"결과를 출력할수 없습니다.");
+		});//ajaxend
+		
+		function printData() {
+			//상수 
+			//page에  속성 boards만 저장
+			const boards=page.boards; //게시글만 저장
+			//const pagination=getPagination(page); //페이지 네이션을 저장 
+			//게시글 작업
+			
+			console.log('boards',boards);
+			const $tbody=$('#board tbody');
+			$.each(boards, (i,$board)=>{
+				const $tr=$('<tr>').appendTo($tbody);
+				$('<td>').text($board.bno).appendTo($tr);
+				//두번째 td 첨부된 파일이 있는 경우 클립아이콘 출력, 없으면 공백
+				//까본결과 첨부 파일이 없으면 false로 출력
+				if($board.attachmentExist==true){
+					$('<td>').css('text-align','right').attr('title','첨부파일 있음')
+					.appendTo($tr);//미완성
+				}else{
+					$('<td>').appendTo($tr);
+				}
+				//세번째 td 제목
+				const $td = $("<td></td>").text($board.title).appendTo($tr);
+				const $link = $("<a>").attr("href", "192.168.0.99:80/cha_client/board/read.html?bno=" + $board.bno);
+				$($td).wrapInner($link);
+				//네번째 td 글쓴이
+				$("<td></td>").append($("<a></a>").attr("class","user").attr("data-toggle","modal").attr("data-target","#modal1").
+				attr("data-id", $board.writer).text($board.writer)).appendTo($tr);
+				<!--data-XX 속성은 내부값을 저장하기 쓴다.-->
+				//다섯번째 날짜 오늘 작성한 글은 시분초 , 그이전 글을 년,월,일
+				const wirteDate=$board.writeDate.split(' ');
+				console.log(wirteDate[0]);
+				console.log(wirteDate[1]);
+				console.log(wirteDate);
+				const today=getToday();//오늘 날짜를 가져오는 함수
+				if(today==wirteDate[0]){
+					$('<td>').text(wirteDate[1]).appendTo($tr);
+				}else{
+					$('<td>').text(wirteDate[0]).appendTo($tr);
+				}
+				//readCnt는 조회수
+				$('<td>').text($board.readCnt).appendTo($tr);
+			});//each End
+		}
+	});//readyEnd
+
+</script>
+</head>
+<body>
+	<div id=page>
+		<header id="header"></header>
+		<nav id="nav"></nav>
+		<div id="main">
+			<aside id="aside"></aside>
+			<section id="section">
+				<!-- 서버에서 받은 게시글 출력영역 -->
+				<div>
+					<table id="board" class="table table-hover">
+						<colgroup>
+							<!-- 열 너비 지정 -->
+							<col width="10%" />
+							<col width="10%" />
+							<col width="40%" />
+							<col width="10%" />
+							<col width="20%" />
+							<col width="10%" />
+						</colgroup>
+						<thead>
+							<tr>
+								<th>글번호</th>
+								<th>첨부파일</th>
+								<th>제목</th>
+								<th>글쓴이</th>
+								<th>날짜</th>
+								<th>조회수</th>
+							</tr>
+						</thead>
+						<tbody>
+						</tbody>
+					</table>
+				</div>
+				<!-- 페이징 -->
+				<div style="text-align: center;">
+					<ul id="pagination" class="pagination"></ul>
+				</div>
+				<!-- 모달 박스:컨텍스트 메뉴를 출력할 영역 -->
+				<div id="modal1" class="modal fade" role="dialog">
+					<div class="modal-dialog modal-sm">
+						<div class="modal-content">
+							<div class="modal-body" id="target">
+								<ul>
+									<li id="findJoinData" data-dismiss="modal">가입일 보기</li>
+									<li id="readById" data-dismiss="modal">게시글 보기</li>
+								</ul>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+		</div>
+
+		<footer id="footer"> </footer>
+
+	</div>
+</body>
+</html>

@@ -19,22 +19,22 @@
 <script type="text/javascript" src="../js/main.js?ver2"></script>
 <style type="text/css">
 .modal {
-   text-align: center;
+	text-align: center;
 }
 
 .modal-dialog {
-   display: inline-block;
-   text-align: left;
-   vertical-align: middle;
+	display: inline-block;
+	text-align: left;
+	vertical-align: middle;
 }
 
 * {
-   border: 0;
-   margin: 0;
+	border: 0;
+	margin: 0;
 }
 
 td a {
-   width: 100%;
+	width: 100%;
 }
 </style>
 <script type="text/javascript">
@@ -58,13 +58,44 @@ td a {
 		}
 		return yyyy+'-'+mm+'-'+dd;
 	}
-
-
+	//new:페이지네이션 계산식
+	function getPagination(page) {
+				console.log('page',page);
+				//페이지 넘버
+				const pageno = page.pageno;
+				//총 개시물 수
+				const count = page.totalcount;
+				//한 페이지에 보여줄 게시글 수 
+				const pagesize = page.pagesize;
+				//페이징에 보여줄 숫자 ex 1~5 ,6~10
+				const blockSize = 5;
+				                             //2-1/5=0.2 내림이므로 0
+				let numOfBlock = parseInt((pageno-1)/blockSize);
+				                  //0*5+1=0         
+				let startPage = numOfBlock * blockSize + 1;
+				                  //0+5-1=4
+				let endPage = startPage + blockSize - 1;
+				                  //245/10+1=23.5
+				let countOfPage = count/pagesize + 1;
+				           //
+				endPage = (endPage>countOfPage) ? countOfPage : endPage;
+				let prev = startPage - 1;
+				let next = (endPage == countOfPage) ? 0 : endPage + 1;
+				
+				return {
+					"startPage" : startPage,
+					"endPage" : endPage,
+					"prev" : prev,
+					"next" : next
+				}
+			}//페이지네이션 End
+	//document ready
 	$(function() {
 		//서버가 보내줄 페이징 결과를 저장
 		//타입 let은 호이스팅이 안되므로 위에서부터
 		let page=undefined;
 		//1. 주소에서 pageno,pagesize,writer를 분리하고 쿼리스트링을 만들어 Ajax요청을 보냄
+		let writer=undefined;
 		//첫페이지가 아니라면
 		let queryString='pageno=1';
 		//로케이션.serach 검색
@@ -72,6 +103,13 @@ td a {
 		//search는 쿼리스트링 ?이하 출력
 			console.log(location.search);
 			console.log(location.search.substring(1));
+			//match 인경우 '' 안쓰고 //사이에 넣으면 writer 문자열이 매치 될 경우 true 
+			if(location.search.match(/writer/)){
+				let idx=location.search.lastIndexOf('=');
+				writer=location.search.substring(idx+1);
+				console.log('이프안에 idx2',idx);
+				console.log('이프안에 writer',writer);
+			}
 			queryString=location.search.substring(1);
 		}
 		$.ajax({
@@ -94,28 +132,36 @@ td a {
 			const boards=page.boards; //게시글만 저장
 			//const pagination=getPagination(page); //페이지 네이션을 저장 
 			//게시글 작업
-			
+			const pagination=getPagination(page);
 			console.log('boards',boards);
 			const $tbody=$('#board tbody');
 			$.each(boards, (i,$board)=>{
 				const $tr=$('<tr>').appendTo($tbody);
 				$('<td>').text($board.bno).appendTo($tr);
+				
 				//두번째 td 첨부된 파일이 있는 경우 클립아이콘 출력, 없으면 공백
 				//까본결과 첨부 파일이 없으면 false로 출력
 				if($board.attachmentExist==true){
 					$('<td>').css('text-align','right').attr('title','첨부파일 있음')
+					.append("<i class='fa fa-paperclip'></i>")
+					.append($('<span>a.txt</span>'))
 					.appendTo($tr);//미완성
 				}else{
 					$('<td>').appendTo($tr);
 				}
 				//세번째 td 제목
-				const $td = $("<td></td>").text($board.title).appendTo($tr);
+				const $td = $("<td>").text($board.title).appendTo($tr);
 				const $link = $("<a>").attr("href", "192.168.0.99:80/cha_client/board/read.html?bno=" + $board.bno);
 				$($td).wrapInner($link);
 				//네번째 td 글쓴이
-				$("<td></td>").append($("<a></a>").attr("class","user").attr("data-toggle","modal").attr("data-target","#modal1").
-				attr("data-id", $board.writer).text($board.writer)).appendTo($tr);
-				<!--data-XX 속성은 내부값을 저장하기 쓴다.-->
+				$("<td>").append($("<a>")
+								.attr("class","user")
+								.attr("data-toggle","modal")
+								.attr("data-target","#modal1")
+								.attr("data-id", $board.writer)
+								.text($board.writer)
+								).appendTo($tr);
+				//data-XX 속성은 내부값을 저장하기 쓴다. 출력 $(this).data(XX);
 				//다섯번째 날짜 오늘 작성한 글은 시분초 , 그이전 글을 년,월,일
 				const wirteDate=$board.writeDate.split(' ');
 				console.log(wirteDate[0]);
@@ -129,10 +175,74 @@ td a {
 				}
 				//readCnt는 조회수
 				$('<td>').text($board.readCnt).appendTo($tr);
+				
 			});//each End
-		}
+			const $ul= $('#pagination');
+			//$ul.empty(); //선택한 요소의 내용을 지웁니다. 태그까지 지울땐 .remove()를 사용
+			let li;
+			if(pagination.prev>0){ //1번 페이지 그룹이 0, 2번 페이지 그룹 1
+				li=$('<li>').text('이전').appendTo($ul);
+				if(queryString.match(/writer/)){
+					li.wrapInner($('<a>').attr('href','/mjh_client/board/list.html?pageno='+pagination.prev
+							+'&writer='+writer));
+				}else{
+					li.wrapInner($('<a>').attr('href','/mjh_client/board/list.html?pageno='+pagination.prev));
+				}
+			}
+			for(let i=pagination.startPage; i<=pagination.endPage;i++){
+				li=$('<li>').text(i).appendTo($ul);
+				if(page.pageno==i){
+					li.attr('class','active').wrapInner($('<a>').attr('href','/mjh_client/board/list.html?pageno='+i)
+							.prop('disabled',true));
+				}else if(queryString.match(/writer/)){
+					li.wrapInner($('<a>').attr('href','/mjh_client/board/list.html?pageno='+i+'&writer='+writer));
+				}else{
+					li.wrapInner($('<a>').attr('href', '/mjh_client/board/list.html?pageno='+i));
+				}
+			}
+			 if(pagination.next>0){
+		         li = $("<li>").text('다음').appendTo($ul);
+		         if(queryString.match(/writer/))
+		            li.wrapInner($("<a>").attr('href','/mjh_client/board/list.html?pageno='+pagination.next+'&writer='+writer));
+		         else
+		            li.wrapInner($("<a>").attr('href','/mjh_client/board/list.html?pageno='+pagination.next));
+		      }
+		}//data end
+		
+		//new : 글쓰기 버튼 jQuery로 만들어 DOM객체로 글쓰기 버튼
+		   $("<button>").addClass("btn btn-success custom")
+		             .attr("id","write").text("글쓰기")
+		             .appendTo($("#write_button_area"));
+		   $("#write").on("click",function(){
+		      location.href="/mjh_client/board/write.html";
+		   });
+		   
+		   
+		   
+		    $("tbody").on("click",".user",function(){
+		          $(".modal-body li").attr("data-id",$(this).data('id'));
+		          
+			      $("#readById").on("click",function(){
+				         location.href = "/mjh_client/board/list.html?writer="+$(this).data('id');
+				         console.log($(this).data('id'));
+				      });
+				      
+				      $("#findJoinData").on("click",function(){
+				    	let params={
+				            username :this.getAttribute('data-id'),
+				            apiKey : apiKey
+				    	}
+				         console.log('params',params.username);
+				        $.ajax({
+				           url : "http://192.168.0.99/cha_board/api/users/joinDate",
+				            method: "get",
+				            data : params
+				         }).done((result)=>console.log('result',result)).fail((xhr)=>printError(xhr,"사용자를 찾을 수 없습니다."));
+				      });
+		       });
+		      //on End
 	});//readyEnd
-
+	
 </script>
 </head>
 <body>
@@ -172,6 +282,8 @@ td a {
 				<div style="text-align: center;">
 					<ul id="pagination" class="pagination"></ul>
 				</div>
+				
+				<div style="text-align: center;" id="write_button_area"></div>
 				<!-- 모달 박스:컨텍스트 메뉴를 출력할 영역 -->
 				<div id="modal1" class="modal fade" role="dialog">
 					<div class="modal-dialog modal-sm">

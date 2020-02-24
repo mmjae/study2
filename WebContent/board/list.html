@@ -155,7 +155,8 @@ td a {
 				}
 				//세번째 td 제목
 				const $td = $("<td>").text($board.title).appendTo($tr);
-				const $link = $("<a>").attr("href", "192.168.0.99:80/cha_client/board/read.html?bno=" + $board.bno);
+																	//uri 인지 url인지 인지
+				const $link = $("<a>").attr("href", "read.html?bno=" + $board.bno);
 				$($td).wrapInner($link);
 				//네번째 td 글쓴이
 				$("<td>").append($("<a>")

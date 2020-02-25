@@ -18,12 +18,35 @@
 <link rel="stylesheet" href="../css/main.css">
 <link rel="stylesheet" href="../css/read.css">
 <script src="//cdn.ckeditor.com/4.13.1/full/ckeditor.js"></script>
-<script type="text/javascript" src="../js/main.js?ver2"></script>
+<script type="text/javascript" src="../js/main.js?ver4"></script>
 <script type="text/javascript">
 	
-	//function printComment(comments){
-		
-	//}
+	function printComments(comments){
+		console.log('comment',comments);	
+		// 댓글을 출력할 div의 모든 자식을 삭제(출력중인 모든 댓글을 삭제)
+		const $comments = $("#comments");
+		$comments.empty();
+		$.each(comments, function(i, comment){
+			const $comment = $("<div>").appendTo($comments)
+			const $upper_div = $("<div>").appendTo($comment);
+			const $center_div = $("<div>").appendTo($comment);
+			const $lower_div = $("<div>").appendTo($comment);
+			$("<span></span>").text(comment.writer).appendTo($upper_div);
+			$("<img>").attr("src", comment.sajin).css("width","40px")
+			          .appendTo($center_div);
+			$("<span>").text(comment.content).appendTo($center_div);
+			$("<span>").text(comment.writeDate,"date").appendTo($lower_div);
+			if(comment.writer==board.loginId) {
+				$("<button>").attr("class", "delete_comment")
+				             .attr("data-cno", comment.cno)
+					         .attr("data-bno", board.bno)
+					         .attr("data-writer", comment.writer)
+					         .text("삭제").css("float","right")
+					         .appendTo($center_div);
+			}
+			$("<hr>").appendTo($comment);
+		});//each End
+	}
 	
 	
 	//첨부 파일 출력(삭제시에도 다시 출력)
@@ -61,8 +84,10 @@
 		//제이쿼리 data()로 읽을수 있음
 		console.log(board);
 		if(board.writer==board.loginId){
-			$li.append("&nbsp;&nbsp;<span class='delete_attachment' data-ano='"
-					+attachment.ano +"'>X</span>");
+			console.log('addano',attachment.ano);
+			console.log('boardbno',board.bno);
+			$li.append("<span class='delete_attachment' data-ano='"
+					+attachment.ano+"' data-bno='"+board.bno+"'>X</span>");
 			$('.delete_attachment').css('cursor','pointer').attr('tilte','삭제하기');
 		}
 		}); //each End
@@ -107,7 +132,7 @@ function printData() {
 	}
 	//첨부파일 출력 , 댓글 출력 --> 사용자가 첨부파일 삭제, 댓글 삭제, 댓글 추가시 화면 갱신
 	printAttachments(board.attachments);
-	//printComments(boards.comments);
+	printComments(board.comments);
 	
 }
 
@@ -192,21 +217,24 @@ $(function() {
 	
 	// 3. 첨부파일 삭제
 		//넓은 선택자              클릭                   클래스 (좁은 선택자)   핸들러
-	$("#attachment").on("click", ".delete_attachment",()=>{
+	$("#attachment").on("click", ".delete_attachment" ,function(){
 		//글쓴이와 로그인 아이디가 일치 하지 않을 경우 해당 이벤트 종료
 		if(board.writer!=board.loginId){
 			return false;}
+		console.log('ano',$(this).data("ano"));
+		console.log('bno',$(this).data("bno"));
+		//console.log('삭제ano',$(".delete_attachment").attr('data-ano'));
 		const param = {
 			_method:"delete",
 			ano: $(this).data("ano"),  //ano 삭제하고
-			bno: board.bno,  //bno 해당하는 모든 첨부파일 가져오기위해  
+			bno: $(this).data("bno"),  //bno 해당하는 모든 첨부파일 가져오기위해  
 			apiKey: apiKey
 		};
 		$.ajax({
 			url: "http://192.168.0.99/cha_board/api/boards/attachments/ano",
 			method: "post",
 			data: param
-		}).then((result)=>{printAttachments(result);}).fail((xhr)=>printError(xhr, "첨부파일을 삭제할 수 없습니다"));	
+		}).then((result)=>printAttachments(result)).fail((xhr)=>printError(xhr, "첨부파일을 삭제할 수 없습니다"));	
 	});
 	
 	// 4. 글 추천
@@ -267,14 +295,14 @@ $(function() {
 		var param = {
 			_method:"delete",
 			cno : $(this).data("cno"),
-			bno : board.bno,
+			bno : $(this).data('bno'),
 			apiKey : apiKey
 		}
 		$.ajax({
 			url: "http://192.168.0.99/cha_board/api/boards/comments/cno",
 			method: "post",
 			data: param,
-		}).done((result)=>printComment(result))
+		}).done((result)=>printComments(result))
 		.fail((xhr)=>printError(xhr, "댓글을 삭제할 수 없습니다"));
 	});
 }); //ready End

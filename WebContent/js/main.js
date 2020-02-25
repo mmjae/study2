@@ -1,5 +1,5 @@
-const apiKey='0P2clAo8cxrcsMAYSCj5uMhty9ROAl'; //레스트 회원 가입시 api 키를 생성하여 저장
-const username='dddd1ddd'; //유어아이디를 const= final 개념 으로 공통 js에 입력 시켜 놓음
+const apiKey='eKIeaoVCSpEINEhh8Uw0zqTWk8JLbn'; //레스트 회원 가입시 api 키를 생성하여 저장
+const username='ddddddd11'; //유어아이디를 const= final 개념 으로 공통 js에 입력 시켜 놓음
 
 
 /*공용 출력 js 메소드*/
